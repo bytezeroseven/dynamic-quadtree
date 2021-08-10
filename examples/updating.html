@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Inserting/Querying</title>
+</head>
+<body>
+	<div id="info"></div>
+	<script type="module">
+		
+		import Quadtree from '../src/Quadtree.js';
+		import QuadtreeItem from '../src/QuadtreeItem.js';
+		import Box from '../src/Box.js';
+
+		const qt = new Quadtree( 0, 0, 500, 500 );
+
+		const items = [];
+
+		let temp = new Quadtree( 0, 0, 500, 500 );
+
+		for ( let i = 0; i < 500; i ++ ) {
+
+			const x = Math.random() * 500;
+			const y = Math.random() * 500;
+			const s = Math.random() > 0.5 ? 1 : 2;
+
+			const item = new QuadtreeItem( x - s, y - s, x + s, y + s );
+
+			qt.add( item );
+
+			const clone = new QuadtreeItem( item.minX, item.minY, item.maxX, item.maxY );
+
+			temp.add( clone );
+			items.push( clone );
+
+		}
+
+		const item = new QuadtreeItem( 0, 0, 10, 10 );
+
+		qt.add( item );
+
+		const canvas = document.createElement( 'canvas' );
+
+		canvas.width = 1010;
+		canvas.height = 500;
+
+		document.body.appendChild( canvas );
+
+		const ctx = canvas.getContext( '2d' );
+
+		draw();
+
+		canvas.onmousemove = function ( { clientX: x, clientY: y } ) {
+
+			const box = this.getBoundingClientRect();
+
+			x -= box.left;
+			y -= box.top;
+
+			item.minX = x - 5;
+			item.minY = y - 5;
+			item.maxX = x + 5;
+			item.maxY = y + 5;
+
+			const updateTime = getTime( function () { 
+
+				item.update();
+
+			} );
+
+			const reconstructTime = getTime( function () {
+
+				temp = new Quadtree( 0, 0, 500, 500 );
+
+				for ( let i = 0; i < items.length; i ++ ) {
+
+					temp.add( items[ i ] );
+
+				}
+
+				temp.add( item );
+
+			} );
+
+			info.innerText = 'Update (left): ' + updateTime + 'ms, Reconstruct (right): ' + reconstructTime + 'ms';
+
+			draw();
+
+		}
+
+		function getTime( callback ) {
+
+			const start = performance.now();
+
+			callback();
+
+			const end = performance.now();
+
+			return end - start;
+
+		}
+
+		function draw() {
+
+			ctx.clearRect( 0, 0, 1010, 500 );
+
+			ctx.lineWidth = 1;
+			ctx.strokeStyle = 'black';
+
+			qt.draw( ctx );
+
+			ctx.save();
+
+			ctx.translate( 510, 0 );
+
+			temp.draw( ctx ); 
+
+			ctx.restore();
+
+			ctx.lineWidth = 2;
+			ctx.strokeStyle = 'red';
+
+			ctx.beginPath();
+
+			rect( item );
+			rect( item.quadtree );
+
+			ctx.stroke();
+
+		}
+
+		function rect( { minX, minY, maxX, maxY } ) {
+
+			ctx.moveTo( minX, minY );
+			ctx.lineTo( maxX, minY );
+			ctx.lineTo( maxX, maxY );
+			ctx.lineTo( minX, maxY );
+			ctx.lineTo( minX, minY );
+
+		}
+
+	</script>
+</body>
+</html>
